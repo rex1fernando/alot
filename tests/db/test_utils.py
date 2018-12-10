@@ -629,17 +629,6 @@ class TestExtractBody(unittest.TestCase):
 
         self.assertEqual(actual, expected)
 
-    def test_text_plain_and_other(self):
-        mail = email.mime.multipart.MIMEMultipart()
-        self._set_basic_headers(mail)
-        mail.attach(email.mime.text.MIMEText('This is an email'))
-        mail.attach(email.mime.application.MIMEApplication(b'1'))
-
-        actual = utils.extract_body(mail)
-        expected = 'This is an email\n'
-
-        self.assertEqual(actual, expected)
-
     def test_text_plain_with_attachment_text(self):
         mail = EmailMessage()
         self._set_basic_headers(mail)
