@@ -10,6 +10,7 @@ import email.header
 import email.mime.application
 import email.policy
 import email.utils
+from email.message import EmailMessage
 import io
 import os
 import os.path
@@ -606,11 +607,12 @@ class TestExtractBody(unittest.TestCase):
         mail['From'] = 'bar@example.com'
 
     def test_single_text_plain(self):
-        mail = email.mime.text.MIMEText('This is an email')
+        mail = EmailMessage()
         self._set_basic_headers(mail)
+        mail.set_content('This is an email')
         actual = utils.extract_body(mail)
 
-        expected = 'This is an email'
+        expected = 'This is an email\n'
 
         self.assertEqual(actual, expected)
 
