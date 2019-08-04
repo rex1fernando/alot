@@ -641,17 +641,18 @@ class TestExtractBody(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def _make_mixed_plain_html(self):
-        mail = email.mime.multipart.MIMEMultipart()
+
+        mail = EmailMessage()
         self._set_basic_headers(mail)
-        mail.attach(email.mime.text.MIMEText('This is an email'))
-        mail.attach(email.mime.text.MIMEText(
+        mail.set_content('This is an email')
+        mail.add_alternative(
             '<!DOCTYPE html><html><body>This is an html email</body></html>',
-            'html'))
+            subtype='html')
         return mail
 
     @mock.patch('alot.db.utils.settings.get', mock.Mock(return_value=True))
     def test_prefer_plaintext(self):
-        expected = 'This is an email'
+        expected = 'This is an email\n'
         mail = self._make_mixed_plain_html()
         actual = utils.extract_body(mail)
 
@@ -663,45 +664,16 @@ class TestExtractBody(unittest.TestCase):
     @mock.patch('alot.db.utils.settings.mailcap_find_match',
                 mock.Mock(return_value=(None, {'view': 'cat'})))
     def test_prefer_html(self):
-        expected = (
-            '<!DOCTYPE html><html><body>This is an html email</body></html>')
+        expected = '<!DOCTYPE html><html><body>This is an html email</body></html>\n'
         mail = self._make_mixed_plain_html()
         actual = utils.extract_body(mail)
 
         self.assertEqual(actual, expected)
 
-
-    @mock.patch('alot.db.utils.settings.mailcap_find_match',
-                mock.Mock(return_value=(None, {'view': 'cat'})))
-    def test_require_mailcap_stdin(self):
-        mail = email.mime.multipart.MIMEMultipart()
-        self._set_basic_headers(mail)
-        mail.attach(email.mime.text.MIMEText(
-            '<!DOCTYPE html><html><body>This is an html email</body></html>',
-            'html'))
-        actual = utils.extract_body(mail)
-        expected = (
-            '<!DOCTYPE html><html><body>This is an html email</body></html>')
-
-        self.assertEqual(actual, expected)
-
-    @mock.patch('alot.db.utils.settings.mailcap_find_match',
-                mock.Mock(return_value=(None, {'view': 'cat %s'})))
-    def test_require_mailcap_file(self):
-        mail = email.mime.multipart.MIMEMultipart()
-        self._set_basic_headers(mail)
-        mail.attach(email.mime.text.MIMEText(
-            '<!DOCTYPE html><html><body>This is an html email</body></html>',
-            'html'))
-        actual = utils.extract_body(mail)
-        expected = (
-            '<!DOCTYPE html><html><body>This is an html email</body></html>')
-
-        self.assertEqual(actual, expected)
-
     def test_simple_utf8_file(self):
         mail = email.message_from_binary_file(
-                open('tests/static/mail/utf8.eml', 'rb'))
+                open('tests/static/mail/utf8.eml', 'rb'),
+                _class=email.message.EmailMessage)
         actual = utils.extract_body(mail)
         expected = "Liebe Grüße!\n"
         self.assertEqual(actual, expected)
