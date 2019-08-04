@@ -211,7 +211,8 @@ def _handle_encrypted(original, message, session_keys=None):
 
     if malformed:
         msg = u'Malformed OpenPGP message: {0}'.format(malformed)
-        content = email.message_from_string(msg, policy=email.policy.SMTP)
+        content = email.message_from_string(msg, _class=email.message.EmailMessage,
+                policy=email.policy.SMTP)
         content.set_charset('utf-8')
         original.attach(content)
 
@@ -228,7 +229,8 @@ def decrypted_message_from_file(handle, session_keys=None):
     :returns: :class:`email.message.Message` possibly augmented with
               decrypted data
     '''
-    return decrypted_message_from_message(email.message_from_file(handle),
+    return decrypted_message_from_message(email.message_from_file(handle,
+                                         _class=email.message.EmailMessage),
                                           session_keys)
 
 
@@ -298,7 +300,9 @@ def decrypted_message_from_bytes(bytestring, session_keys=None):
     :param session_keys: a list OpenPGP session keys
     """
     return decrypted_message_from_message(
-        email.message_from_bytes(bytestring, policy=email.policy.SMTP),
+        email.message_from_bytes(bytestring, 
+                _class=email.message.EmailMessage,
+                policy=email.policy.SMTP),
         session_keys)
 
 
