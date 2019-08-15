@@ -33,7 +33,6 @@ async def periodic(callable_, period, *args, **kwargs):
             logging.error('error in loop hook %s', str(e))
         await asyncio.sleep(period)
 
-
 class UI:
     """
     This class integrates all components of alot and offers
@@ -50,6 +49,9 @@ class UI:
         :param colourmode: determines which theme to chose
         :type colourmode: int in [1,16,256]
         """
+
+        
+
         self.dbman = dbman
         """Database Manager (:class:`~alot.db.manager.DBManager`)"""
         self.buffers = []
@@ -93,6 +95,8 @@ class UI:
         mainframe = urwid.Frame(urwid.SolidFill())
         self.root_widget = urwid.AttrMap(mainframe, global_att)
 
+        self.notify
+
         signal.signal(signal.SIGINT, self.handle_signal)
         signal.signal(signal.SIGUSR1, self.handle_signal)
 
@@ -110,6 +114,7 @@ class UI:
             self._sender_hist_file, size=size)
         self.recipienthistory = self._load_history_from_file(
             self._recipients_hist_file, size=size)
+
 
         # set up main loop
         self.mainloop = urwid.MainLoop(
@@ -703,6 +708,7 @@ class UI:
         # allowed as a value fo cmd.
         if cmd:
             if cmd.prehook:
+                logging.info('calling pre-hook')
                 await cmd.prehook(ui=self, dbm=self.dbman, cmd=cmd)
             try:
                 if asyncio.iscoroutinefunction(cmd.apply):
@@ -758,6 +764,7 @@ class UI:
         :returns: a list of history items (the lines of the file)
         :rtype: list(str)
         """
+        
         if size == 0:
             return []
         if os.path.exists(path):
@@ -768,6 +775,7 @@ class UI:
             return lines
         else:
             return []
+
 
     @staticmethod
     def _save_history_to_file(history, path, size=-1):

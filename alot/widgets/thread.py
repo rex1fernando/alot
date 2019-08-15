@@ -106,6 +106,7 @@ class TextlinesList(SimpleTree):
         SimpleTree.__init__(self, structure)
 
 
+
 class DictList(SimpleTree):
     """
     :class:`SimpleTree` that displays key-value pairs.

@@ -5,6 +5,7 @@ from datetime import datetime
 
 from .message import Message
 from ..settings.const import settings
+import logging
 
 
 class Thread:
@@ -260,6 +261,7 @@ class Thread:
         for m in msg_hash.keys():
             if m.get_message_id() == mid:
                 return msg_hash[m]
+            
         return None
 
     def get_newest_date(self):

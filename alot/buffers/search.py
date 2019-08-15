@@ -8,6 +8,7 @@ from .buffer import Buffer
 from ..settings.const import settings
 from ..walker import PipeWalker
 from ..widgets.search import ThreadlineWidget
+import logging
 
 
 class SearchBuffer(Buffer):
@@ -25,15 +26,16 @@ class SearchBuffer(Buffer):
         default_order = settings.get('search_threads_sort_order')
         self.sort_order = sort_order or default_order
         self.result_count = 0
+        self.unread_count = 0
         self.isinitialized = False
         self.proc = None  # process that fills our pipe
         self.rebuild()
         Buffer.__init__(self, ui, self.body)
 
     def __str__(self):
-        formatstring = '[search] for "%s" (%d message%s)'
-        return formatstring % (self.querystring, self.result_count,
-                               's' if self.result_count > 1 else '')
+        formatstring = '[search] (%d message%s, %d unread) query: "%s" '
+        return formatstring % (self.result_count,
+                               's' if self.result_count > 1 else '', self.unread_count, self.querystring)
 
     def get_info(self):
         info = {}
@@ -69,7 +71,9 @@ class SearchBuffer(Buffer):
             exclude_tags = [t for t in exclude_tags.split(';') if t]
 
         try:
+            self.unread_count = self.dbman.count_messages(self.querystring+' AND tag:unread')
             self.result_count = self.dbman.count_messages(self.querystring)
+            logging.debug(self.result_count)
             self.pipe, self.proc = self.dbman.get_threads(self.querystring,
                                                           order,
                                                           exclude_tags)
@@ -122,4 +126,3 @@ class SearchBuffer(Buffer):
             self.body.set_focus(num_lines - 1)
         else:
             self.rebuild(reverse=True)
-

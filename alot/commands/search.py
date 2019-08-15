@@ -199,6 +199,7 @@ class TagCommand(Command):
                     threadline_widget.rebuild()
                 searchbuffer.result_count = searchbuffer.dbman.count_messages(
                     searchbuffer.querystring)
+                searchbuffer.unread_count = searchbuffer.dbman.count_messages(searchbuffer.querystring+' AND tag:unread')
             else:
                 searchbuffer.rebuild()
 

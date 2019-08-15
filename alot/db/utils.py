@@ -473,6 +473,7 @@ def extract_body(mail, types=None, field_key='copiousoutput'):
     preferred = 'text/plain' if settings.get(
         'prefer_plaintext') else 'text/html'
     has_preferred = False
+    
 
     # see if the mail has our preferred type
     if types is None:
@@ -500,6 +501,10 @@ def extract_body(mail, types=None, field_key='copiousoutput'):
 
         if ctype == 'text/plain':
             body_parts.append(string_sanitize(remove_cte(part, as_string=True)))
+            # rendered_payload = render_part(part, as_string=True)
+            # if rendered_payload:  # handler had output
+            #     body_parts.append(string_sanitize(rendered_payload))
+            
         else:
             rendered_payload = render_part(part)
             if rendered_payload:  # handler had output
