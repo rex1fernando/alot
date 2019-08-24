@@ -16,12 +16,10 @@
 
 """Tests for global commands."""
 
-import logging
 import os
 import tempfile
 import unittest
-
-import mock
+from unittest import mock
 
 from alot.commands import globals as g_commands
 

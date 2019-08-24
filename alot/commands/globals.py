@@ -25,10 +25,10 @@ from .. import buffers
 from .. import helper
 from ..helper import split_commandstring
 from ..helper import mailto_to_envelope
-from ..completion import CommandLineCompleter
-from ..completion import ContactsCompleter
-from ..completion import AccountCompleter
-from ..completion import TagsCompleter
+from ..completion.commandline import CommandLineCompleter
+from ..completion.contacts import ContactsCompleter
+from ..completion.accounts import AccountCompleter
+from ..completion.tags import TagsCompleter
 from ..widgets.utils import DialogBox
 from ..db.errors import DatabaseLockedError
 from ..db.envelope import Envelope
@@ -280,10 +280,10 @@ class ExternalCommand(Command):
                 ret = str(e)
             else:
                 _, err = await proc.communicate(stdin.read() if stdin else None)
-            if proc.returncode == 0:
-                ret = 'success'
-            elif err:
-                ret = err.decode(urwid.util.detected_encoding)
+                if proc.returncode == 0:
+                    ret = 'success'
+                elif err:
+                    ret = err.decode(urwid.util.detected_encoding)
         else:
             with ui.paused():
                 try:

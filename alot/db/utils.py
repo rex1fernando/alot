@@ -6,7 +6,6 @@
 import os
 import email
 import email.charset as charset
-from email.iterators import typed_subpart_iterator
 import email.policy
 import email.utils
 import tempfile
@@ -211,7 +210,9 @@ def _handle_encrypted(original, message, session_keys=None):
 
     if malformed:
         msg = u'Malformed OpenPGP message: {0}'.format(malformed)
-        content = email.message_from_string(msg, policy=email.policy.SMTP)
+        content = email.message_from_string(msg,
+                                            _class=email.message.EmailMessage,
+                                            policy=email.policy.SMTP)
         content.set_charset('utf-8')
         original.attach(content)
 
@@ -228,7 +229,8 @@ def decrypted_message_from_file(handle, session_keys=None):
     :returns: :class:`email.message.Message` possibly augmented with
               decrypted data
     '''
-    return decrypted_message_from_message(email.message_from_file(handle),
+    return decrypted_message_from_message(email.message_from_file(handle,
+                                          _class=email.message.EmailMessage),
                                           session_keys)
 
 
@@ -298,7 +300,9 @@ def decrypted_message_from_bytes(bytestring, session_keys=None):
     :param session_keys: a list OpenPGP session keys
     """
     return decrypted_message_from_message(
-        email.message_from_bytes(bytestring, policy=email.policy.SMTP),
+        email.message_from_bytes(bytestring,
+                                 _class=email.message.EmailMessage,
+                                 policy=email.policy.SMTP),
         session_keys)
 
 
@@ -309,7 +313,7 @@ def extract_headers(mail, headers=None):
     one line "KEY: VALUE" for each requested header present in the mail.
 
     :param mail: the mail to use
-    :type mail: :class:`email.Message`
+    :type mail: :class:`email.message.EmailMessage`
     :param headers: headers to extract
     :type headers: list of str
     """
@@ -389,7 +393,7 @@ def remove_cte(part, as_string=False):
     ..Note:: All this may be depricated in favour of
              `email.contentmanager.raw_data_manager` (v3.6+)
 
-    :param email.Message part: The part to decode
+    :param email.message.EmailMessage part: The part to decode
     :param bool as_string: If true return a str, otherwise return bytes
     :returns: The mail with any Content-Transfer-Encoding removed
     :rtype: Union[str, bytes]
@@ -453,68 +457,46 @@ def remove_cte(part, as_string=False):
     return bp
 
 
-def extract_body(mail, types=None, field_key='copiousoutput'):
+MISSING_HTML_MSG = ("This message contains a text/html part that was not "
+                    "rendered due to a missing mailcap entry. "
+                    "Please refer to item 5 in our FAQ: "
+                    "http://alot.rtfd.io/en/latest/faq.html")
+
+
+def extract_body(mail):
     """Returns a string view of a Message.
 
-    If the `types` argument is set then any encoding types there will be used
-    as the prefered encoding to extract. If `types` is None then
-    :ref:`prefer_plaintext <prefer-plaintext>` will be consulted; if it is True
-    then text/plain parts will be returned, if it is false then text/html will
-    be returned if present or text/plain if there are no text/html parts.
+    This consults :ref:`prefer_plaintext <prefer-plaintext>`
+    to determine if a "text/plain" alternative is preferred over a "text/html"
+    part.
 
     :param mail: the mail to use
-    :type mail: :class:`email.Message`
-    :param types: mime content types to use for body string
-    :type types: list[str]
+    :type mail: :class:`email.message.EmailMessage`
     :returns: The combined text of any parts to be used
     :rtype: str
     """
 
-    preferred = 'text/plain' if settings.get(
-        'prefer_plaintext') else 'text/html'
-    has_preferred = False
-    
+    if settings.get('prefer_plaintext'):
+        preferencelist = ('plain',)
+    else:
+        preferencelist = ('html', 'plain')
 
-    # see if the mail has our preferred type
-    if types is None:
-        has_preferred = list(typed_subpart_iterator(
-            mail, *preferred.split('/')))
+    body_part = mail.get_body(preferencelist)
+    if body_part is None:  # if no part matching preferredlist was found
+        return ""
 
-    body_parts = []
-    for part in mail.walk():
-        # skip non-leaf nodes in the mail tree
-        if part.is_multipart():
-            continue
+    displaystring = ""
 
-        ctype = part.get_content_type()
-
-        if types is not None:
-            if ctype not in types:
-                continue
-        cd = part.get('Content-Disposition', '')
-        if cd.startswith('attachment'):
-            continue
-        # if the mail has our preferred type, we only keep this type
-        # note that if types != None, has_preferred always stays False
-        if has_preferred and ctype != preferred:
-            continue
-
-        if ctype == 'text/plain':
-            body_parts.append(string_sanitize(remove_cte(part, as_string=True)))
-            # rendered_payload = render_part(part, as_string=True)
-            # if rendered_payload:  # handler had output
-            #     body_parts.append(string_sanitize(rendered_payload))
-            
+    if body_part.get_content_type() == 'text/plain':
+        displaystring = string_sanitize(remove_cte(body_part, as_string=True))
+    else:
+        rendered_payload = render_part(body_part)
+        if rendered_payload:  # handler had output
+            displaystring = string_sanitize(rendered_payload)
         else:
-            rendered_payload = render_part(part)
-            if rendered_payload:  # handler had output
-                body_parts.append(string_sanitize(rendered_payload))
-            # mark as attachment
-            elif cd:
-                part.replace_header('Content-Disposition', 'attachment; ' + cd)
-            else:
-                part.add_header('Content-Disposition', 'attachment;')
-    return u'\n\n'.join(body_parts)
+            if body_part.get_content_type() == 'text/html':
+                displaystring = MISSING_HTML_MSG
+    return displaystring
 
 
 def formataddr(pair):

@@ -18,13 +18,11 @@
 """Test suite for alot.helper module."""
 
 import datetime
-import email
 import errno
 import os
 import random
 import unittest
-
-import mock
+from unittest import mock
 
 from alot import helper
 

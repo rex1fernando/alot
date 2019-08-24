@@ -260,7 +260,7 @@ class MessageTree(CollapsibleTree):
 
     def _get_body(self):
         if self._bodytree is None:
-            bodytxt = self._message.accumulate_body()
+            bodytxt = self._message.get_body_text()
             if bodytxt:
                 bodytxt = self.thread_message_text_translate(bodytxt,
                                                              self._message)

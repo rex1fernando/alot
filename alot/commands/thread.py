@@ -24,7 +24,8 @@ from .globals import MoveCommand
 from .globals import CommandCanceled
 from .common import RetagPromptCommand
 from .envelope import SendCommand
-from ..completion import ContactsCompleter, PathCompleter
+from ..completion.contacts import ContactsCompleter
+from ..completion.path import PathCompleter
 from ..db.utils import decode_header
 from ..db.utils import formataddr
 from ..db.utils import extract_headers
@@ -149,10 +150,10 @@ class ReplyCommand(Command):
         mailcontent = quotestring
         quotehook = settings.get_hook('text_quote')
         if quotehook:
-            mailcontent += quotehook(self.message.accumulate_body())
+            mailcontent += quotehook(self.message.get_body_text())
         else:
             quote_prefix = settings.get('quote_prefix')
-            for line in self.message.accumulate_body().splitlines():
+            for line in self.message.get_body_text().splitlines():
                 mailcontent += quote_prefix + line + '\n'
 
         envelope = Envelope(bodytext=mailcontent, replied=self.message)
@@ -327,10 +328,10 @@ class ForwardCommand(Command):
             mailcontent = quote
             quotehook = settings.get_hook('text_quote')
             if quotehook:
-                mailcontent += quotehook(self.message.accumulate_body())
+                mailcontent += quotehook(self.message.get_body_text())
             else:
                 quote_prefix = settings.get('quote_prefix')
-                for line in self.message.accumulate_body().splitlines():
+                for line in self.message.get_body_text().splitlines():
                     mailcontent += quote_prefix + line + '\n'
 
             envelope.body = mailcontent
@@ -463,7 +464,7 @@ class EditNewCommand(Command):
                                 'signed', 'encrypted', 'unread', 'attachment'})
         tags = list(tags)
         # set body text
-        mailcontent = self.message.accumulate_body()
+        mailcontent = self.message.get_body_text()
         envelope = Envelope(bodytext=mailcontent, tags=tags)
 
         # copy selected headers
@@ -610,8 +611,6 @@ class ChangeDisplaymodeCommand(Command):
                    'help': 'let the shell interpret the command'}),
     (['--notify_stdout'], {'action': 'store_true',
                            'help': 'display cmd\'s stdout as notification'}),
-    (['--field_key'], {'help': 'mailcap field key for decoding',
-                       'default': 'copiousoutput'}),
 ])
 class PipeCommand(Command):
 
@@ -621,8 +620,7 @@ class PipeCommand(Command):
     def __init__(self, cmd, all=False, separately=False, background=False,
                  shell=False, notify_stdout=False, format='raw',
                  add_tags=False, noop_msg='no command specified',
-                 confirm_msg='', done_msg=None, field_key='copiousoutput',
-                 **kwargs):
+                 confirm_msg='', done_msg=None, **kwargs):
         """
         :param cmd: shellcommand to open
         :type cmd: str or list of str
@@ -632,15 +630,15 @@ class PipeCommand(Command):
         :type separately: bool
         :param background: do not suspend the interface
         :type background: bool
-        :param notify_stdout: display command\'s stdout as notification message
-        :type notify_stdout: bool
         :param shell: let the shell interpret the command
         :type shell: bool
-
-                       'raw': message content as is,
-                       'decoded': message content, decoded quoted printable,
-                       'id': message ids, separated by newlines,
-                       'filepath': paths to message files on disk
+        :param notify_stdout: display command\'s stdout as notification message
+        :type notify_stdout: bool
+        :param format: what to pipe to the processes stdin. one of:
+            'raw': message content as is,
+            'decoded': message content, decoded quoted printable,
+            'id': message ids, separated by newlines,
+            'filepath': paths to message files on disk
         :type format: str
         :param add_tags: add 'Tags' header to the message
         :type add_tags: bool
@@ -651,8 +649,6 @@ class PipeCommand(Command):
         :type confirm_msg: str
         :param done_msg: notification message to show upon success
         :type done_msg: str
-        :param field_key: malcap field key for decoding
-        :type field_key: str
         """
         Command.__init__(self, **kwargs)
         if isinstance(cmd, str):
@@ -668,7 +664,6 @@ class PipeCommand(Command):
         self.noop_msg = noop_msg
         self.confirm_msg = confirm_msg
         self.done_msg = done_msg
-        self.field_key = field_key
 
     async def apply(self, ui):
         # abort if command unset
@@ -712,7 +707,7 @@ class PipeCommand(Command):
                     pipestrings.append(mail.as_string())
                 elif self.output_format == 'decoded':
                     headertext = extract_headers(mail)
-                    bodytext = extract_body(mail, field_key=self.field_key)
+                    bodytext = extract_body(mail)
                     msgtext = '%s\n\n%s' % (headertext, bodytext)
                     pipestrings.append(msgtext)
 
